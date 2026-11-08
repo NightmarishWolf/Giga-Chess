@@ -32,7 +32,7 @@ main{display:flex;width:100%;height:100dvh}
 .sq:focus-visible{outline:3px solid var(--accent);outline-offset:-3px;z-index:2}
 .dot{position:absolute;width:32%;height:32%;border-radius:50%;background:#ffd21f;box-shadow:0 0 0 2px rgba(24,35,43,.75);z-index:2;pointer-events:none}
 .cap{position:absolute;inset:5%;border-radius:50%;border:4px solid #ffd21f;box-shadow:0 0 0 2px rgba(24,35,43,.75),inset 0 0 0 2px rgba(24,35,43,.75);z-index:2;pointer-events:none}
-.pc{position:relative;z-index:1;user-select:none}
+.pc{position:relative;z-index:1;user-select:none;font-family:"Iowan Old Style",Palatino,"Palatino Linotype",Georgia,serif;font-weight:400;letter-spacing:normal}
 .pc.w{color:#fff;text-shadow:0 0 2px #000,0 1px 2px rgba(0,0,0,.8)}
 .pc.b{color:#1a1a1f;text-shadow:0 1px 1px rgba(255,255,255,.3)}
 .co{position:absolute;font:600 max(7px,calc(var(--s)*.24))/1 system-ui,sans-serif;z-index:1;opacity:.8}
@@ -128,6 +128,52 @@ button.act:disabled{opacity:.4;cursor:not-allowed}
 button.act:disabled:hover{border-color:var(--muted);color:var(--ink)}
 #menuload{align-self:center;background:transparent;border:1px solid var(--muted);color:var(--ink);border-radius:4px;padding:8px 14px;font:inherit;cursor:pointer}
 #menuload:hover{border-color:var(--accent);color:var(--accent)}
+#leave{position:fixed;inset:0;z-index:36;display:none;background:rgba(10,16,20,.82);padding:16px;overflow:auto}
+#leave.show{display:flex}
+#leave .card{max-width:440px;margin:auto}
+#leave h2{font-size:1.5rem}
+#skinbtn{position:fixed;right:18px;bottom:18px;z-index:2;background:var(--panel)}
+#skins{position:fixed;inset:0;z-index:35;display:none;background:rgba(10,16,20,.82);padding:16px;overflow:auto}
+#skins.show{display:flex}
+#skins .card{max-width:700px;margin:auto;gap:16px}
+#skins h2{font-size:1.6rem}
+.skgrid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px;width:100%}
+.skin{min-width:0;overflow-wrap:anywhere}
+@media (max-width:420px){.pvsq{font-size:17px}.pvrow{overflow:hidden}.skgrid{gap:8px}.skin{padding:10px 6px}.skin span.d{font-size:.78rem}}
+.skin{display:flex;flex-direction:column;align-items:center;gap:8px;background:var(--bg);border:3px solid transparent;border-radius:6px;padding:14px 12px;color:var(--ink);font:inherit;cursor:pointer}
+.skin:hover,.skin:focus-visible{border-color:var(--muted);outline:none}
+.skin.on{border-color:var(--accent)}
+.skin b{font-size:1.15rem;font-weight:600}
+.skin span.d{color:var(--muted);font-size:.9rem;line-height:1.35}
+.pvrow{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));width:100%;max-width:240px}
+.pvsq{min-width:0;overflow:hidden;aspect-ratio:1;display:flex;align-items:center;justify-content:center;font-size:34px;line-height:1}
+.pvrow.pcl{font-family:"Iowan Old Style",Palatino,"Palatino Linotype",Georgia,serif;font-weight:400}
+.pvrow.bd{max-width:240px}.pvrow.bd .pvsq{font-size:0}
+.skhead{width:100%;margin:6px 0 -4px;font-size:1.05rem;color:var(--muted);font-weight:600;text-align:left;letter-spacing:.04em;text-transform:uppercase}
+#bv-classic{--light:#d7e0e4;--dark:#6f8a9a}#bv-retro{--light:#d8e2a0;--dark:#6a8f3c}
+.pvsq.l{background:var(--light)}.pvsq.d{background:var(--dark)}
+/* ---- Retro board skin (squares, borders, buttons, font) ---- */
+.skb{--bg:#1d1b2f;--panel:#2b2845;--ink:#f4f0d8;--muted:#a9a5d6;--light:#d8e2a0;--dark:#6a8f3c;--accent:#ffcc33;
+  font-family:"Courier New",ui-monospace,Menlo,Consolas,monospace;font-weight:700}
+.skp .pc:not(.cl){font-size:0;color:transparent;text-shadow:none;display:block;width:84%;height:84%;
+  background-position:center;background-size:contain;background-repeat:no-repeat;image-rendering:pixelated}
+.skb #board{box-shadow:0 0 0 4px #000,0 0 0 8px var(--ink)}
+.skb .act,.skb .opt,.skb #menuload,.skb #skinbtn,.skb .skin{border-radius:0;border:3px solid var(--ink);box-shadow:4px 4px 0 #000}
+.skb .opt{border-color:#000}
+.skb .opt.on,.skb .skin.on{border-color:var(--accent);background:#3b3766}
+.skb .opt:hover,.skb .opt:focus-visible,.skb .skin:hover{border-color:var(--accent)}
+.skb .opt.go{background:var(--accent);border-color:#000}
+.skb .card{border-radius:0;border:4px solid var(--ink);box-shadow:8px 8px 0 #000}
+.skb aside{border-left:4px solid var(--ink)}
+.skb #hist{background:var(--panel);box-shadow:none;border-right:4px solid var(--ink)}
+.skb #htab{background:var(--panel);border-radius:0;border:3px solid var(--ink);border-left:0;box-shadow:none}
+.skb #hint,.skb #slcode,.skb #slname,.skb #sllist li{border-radius:0}
+.skb .dot,.skb .cap,.skb .shoot{border-radius:0}
+.skb .sq.chk::after{background:rgba(226,70,70,.7)}
+.skb #promo div{border-radius:0;border:4px solid var(--ink)}
+.skb #promo button{display:flex;align-items:center;justify-content:center;border-radius:0;border:3px solid #000;background:var(--light)}
+.skp .crown .pc{width:80px;height:80px;margin:0 auto}
+.skb h1,.skb h2,.skb h3{letter-spacing:.02em}
 #promo{position:fixed;inset:0;background:rgba(0,0,0,.6);display:none;align-items:center;justify-content:center;z-index:10}
 #promo.show{display:flex}
 #promo div{background:var(--panel);padding:16px;border-radius:6px;display:flex;gap:10px}
@@ -199,6 +245,7 @@ button.act:disabled:hover{border-color:var(--muted);color:var(--ink)}
     </div>
   </div>
   <button class="opt go" id="play">Play</button>
+  <button class="act" id="skinbtn">Skins</button>
   <button id="menuload">Load a saved game</button>
 </div></div>
 <div id="sl" role="dialog" aria-modal="true" aria-labelledby="slt"><div class="card">
@@ -216,6 +263,25 @@ button.act:disabled:hover{border-color:var(--muted);color:var(--ink)}
   </section>
   <div id="slmsg" role="status"></div>
   <div class="btns"><button class="act" id="slclose">Close</button></div>
+</div></div>
+<div id="leave" role="dialog" aria-modal="true" aria-labelledby="lvt"><div class="card">
+  <h2 id="lvt">Leave this game?</h2>
+  <p>The game in progress will be lost unless you save it first.</p>
+  <div class="btns"><button class="act" id="lvkeep">Keep playing</button><button class="act" id="lvsave">Save first</button><button class="act main" id="lvgo">New game</button></div>
+</div></div>
+<div id="skins" role="dialog" aria-modal="true" aria-labelledby="skt"><div class="card">
+  <h2 id="skt">Skins</h2>
+  <div class="skhead">Pieces</div>
+  <div class="skgrid" data-kind="p">
+    <button class="skin on" data-kind="p" data-skin="classic" aria-pressed="true"><div class="pvrow pcl" id="pv-classic"></div><b>Classic</b><span class="d">The default piece symbols.</span></button>
+    <button class="skin" data-kind="p" data-skin="retro" aria-pressed="false"><div class="pvrow skp" id="pv-retro"></div><b>Retro</b><span class="d">Detailed 32-bit style pixel pieces.</span></button>
+  </div>
+  <div class="skhead">Board</div>
+  <div class="skgrid" data-kind="b">
+    <button class="skin on" data-kind="b" data-skin="classic" aria-pressed="true"><div class="pvrow bd" id="bv-classic"></div><b>Classic</b><span class="d">Blue-grey squares and the default look.</span></button>
+    <button class="skin" data-kind="b" data-skin="retro" aria-pressed="false"><div class="pvrow bd" id="bv-retro"></div><b>Retro</b><span class="d">Green and cream squares, chunky borders and buttons, retro font.</span></button>
+  </div>
+  <div class="btns"><button class="act" id="skclose">Close</button></div>
 </div></div>
 <div id="promo" role="dialog" aria-label="Choose promotion piece"><div></div></div>
 
@@ -765,7 +831,7 @@ function updateBoard(chk,ks,last,targets,shots){
     d.className=baseCls[i]+(fl&1?' last':'')+(fl&2?' sel':'')+(fl&4?' chk':'');
     d.setAttribute('aria-label',sqName(i)+(p?' '+(isW(p)?'white ':'black ')+NAMES[p.toLowerCase()]:' empty'));
     let h='';
-    if(p)h+=`<span class="pc ${isW(p)?'w':'b'}">${GLYPH[p.toLowerCase()]}&#xFE0E;</span>`;
+    if(p)h+=`<span class="pc ${isW(p)?'w':'b'} t-${p.toLowerCase()}">${GLYPH[p.toLowerCase()]}&#xFE0E;</span>`;
     if(mk)h+=`<span class="${mk==='s'?'shoot':mk==='c'?'cap':'dot'}"></span>`;
     if(flip?r===0:r===W-1)h+=`<span class="co f">${colName(f)}</span>`;
     if(flip?f===W-1:f===0)h+=`<span class="co r">${W-r}</span>`;
@@ -785,6 +851,7 @@ function showOver(on,chk){
   const last=hist.length?hist[hist.length-1].san:'';
   $('ocrown').className='crown '+(mate?winner[0].toLowerCase():'d');
   $('ocrown').textContent=mate?'♚\uFE0E':'½';
+  if(mate&&is8())$('ocrown').innerHTML=`<span class="pc ${winner[0].toLowerCase()} t-k"></span>`;
   $('ot').textContent=mate?'Checkmate':!moves.length?'Stalemate':'Draw';
   const nm=c=>AI.level?(c[0].toLowerCase()===humanSide?'You':'The computer'):c;
   const wn=nm(winner),ln=nm(loser),poss=ln==='You'?'Your':ln==='The computer'?"The computer's":ln+"'s";
@@ -839,6 +906,7 @@ function choosePromo(ms){
     b.textContent=GLYPH[m.promo]+'\uFE0E';
     b.style.color=cur.t==='w'?'#fff':'#1a1a1f';
     if(cur.t==='w')b.style.textShadow='0 0 2px #000';
+    if(is8())b.innerHTML=`<span class="pc ${cur.t==='w'?'w':'b'} t-${m.promo}"></span>`;
     b.setAttribute('aria-label','Promote to '+NAMES[m.promo]);
     b.onclick=()=>{$('promo').classList.remove('show');play(m);};
     box.appendChild(b);
@@ -868,7 +936,106 @@ $('new').onclick=()=>startGame(MODE,W);
 $('oagain').onclick=()=>startGame(MODE,W);
 $('oview').onclick=()=>{overDone=true;$('over').classList.remove('show');};
 $('omenu').onclick=()=>{overDone=true;$('over').classList.remove('show');$('menu').classList.add('show');};
-$('mn').onclick=()=>{if(!hist.length||confirm('Leave this game and start a new one?'))$('menu').classList.add('show');};
+const showMenu=()=>$('menu').classList.add('show');
+$('mn').onclick=()=>{
+  if(!hist.length){showMenu();return;}
+  $('leave').classList.add('show');$('lvkeep').focus();
+};
+$('lvkeep').onclick=()=>$('leave').classList.remove('show');
+$('lvgo').onclick=()=>{$('leave').classList.remove('show');showMenu();};
+$('lvsave').onclick=()=>{$('leave').classList.remove('show');openSL();};
+$('leave').addEventListener('mousedown',e=>{if(e.target.id==='leave')$('leave').classList.remove('show');});
+addEventListener('keydown',e=>{if(e.key==='Escape'&&$('leave').classList.contains('show'))$('leave').classList.remove('show');});
+/* ---------- skins ---------- */
+/* Retro (32-bit style) sprites: pieces are described as shapes on a 24x24 grid, rasterised to pixels,
+   outlined and shaded (light / base / dark with dithering) at load time. */
+const RS=24;
+const SH={
+  R:(a,b,c,d)=>(x,y)=>x>=a&&x<c&&y>=b&&y<d,
+  E:(cx,cy,rx,ry)=>(x,y)=>((x-cx)/rx)**2+((y-cy)/ry)**2<=1,
+  P:pts=>(x,y)=>{let i=false;for(let a=0,b=pts.length-1;a<pts.length;b=a++){const[xi,yi]=pts[a],[xj,yj]=pts[b];if((yi>y)!==(yj>y)&&x<(xj-xi)*(y-yi)/(yj-yi)+xi)i=!i;}return i;},
+  L:(x0,y0,x1,y1,w)=>(x,y)=>{const dx=x1-x0,dy=y1-y0,t=Math.max(0,Math.min(1,((x-x0)*dx+(y-y0)*dy)/(dx*dx+dy*dy||1)));return Math.hypot(x-x0-t*dx,y-y0-t*dy)<=w/2;}
+};
+const {R,E,P,L}=SH;
+const BASEP=[['+',R(5,20,19,22.5)],['+',R(7,18.5,17,20.5)],['d',R(6,20,18,21)]];
+const rot=(pts,cx,cy,k)=>pts.map(([x,y])=>{let dx=x-cx,dy=y-cy;for(let i=0;i<k;i++){const t=dx;dx=-dy;dy=t;}return[cx+dx,cy+dy];});
+const blade=[[12,10],[12,1.5],[19.5,2.5]];
+const snake=[];for(let i=0;i<=18;i++){const t=i/18;snake.push(E(12+5.2*Math.sin(t*Math.PI*2.2+0.4),6+t*13.5,2.5,2.2));}
+const RP={
+ p:[['+',E(12,6.5,3.6,3.6)],['+',R(9.5,9,14.5,11)],['+',P([[9.5,11],[14.5,11],[16.5,18.5],[7.5,18.5]])],['+',R(8,10.5,16,12.5)],['d',R(8.5,12,15.5,12.7)]],
+ r:[['+',R(6,2.5,9,6)],['+',R(10,2.5,14,6)],['+',R(15,2.5,18,6)],['+',R(6,5.5,18,8)],['+',P([[8,8],[16,8],[17.5,18.5],[6.5,18.5]])],['d',R(6,7.5,18,8.4)],['g',R(11,11,13,15)],['d',R(9,16,15,16.8)]],
+ b:[['+',E(12,8.5,4.6,6)],['+',E(12,3,1.7,1.7)],['+',R(10,12,14,14)],['+',R(7.5,13.5,16.5,15.5)],['+',P([[9,15],[15,15],[17,18.5],[7,18.5]])],['d',R(11.2,4.8,12.8,10.2)],['d',R(9.5,6.6,14.5,8)]],
+ n:[['+',P([[8,19],[9.2,14],[6.5,13.2],[3.8,11.4],[4.4,9.6],[8,6.8],[9.6,3.8],[11.5,2.4],[12.4,4.6],[15.5,5.2],[19,10.5],[19,19]])],['d',L(14.2,5.8,18,11.5,1.2)],['d',L(14.8,8,17.2,12.5,1)],['g',E(9.6,8.4,0.95,0.95)],['d',E(5.2,11.6,0.6,0.6)],['d',L(6.5,13.4,9.5,12.6,0.8)]],
+ q:[['+',P([[3,4.5],[8.5,9.5],[12,2],[15.5,9.5],[21,4.5],[18.5,13.5],[5.5,13.5]])],['+',R(6.5,8,17.5,13.5)],['+',E(3.6,4.2,1.7,1.7)],['+',E(12,2.6,2,2)],['+',E(20.4,4.2,1.7,1.7)],['+',R(7.5,12.5,16.5,15)],['+',P([[8.5,15],[15.5,15],[17,18.5],[7,18.5]])],['g',E(12,13.8,0.8,0.6)]],
+ k:[['+',R(10.8,0.5,13.2,6.5)],['+',R(8.8,2,15.2,4.2)],['+',E(12,10,5,4)],['+',R(7,12.5,17,15)],['+',P([[8.3,15],[15.7,15],[17.2,18.5],[6.8,18.5]])],['g',E(12,13.8,0.8,0.6)],['d',L(8.5,9.5,15.5,9.5,0.8)]],
+ w:[['+',E(12,4.5,2.4,4.2)],['+',E(12,15.5,2.4,4.2)],['+',E(5.8,10,4.2,2.4)],['+',E(18.2,10,4.2,2.4)],['+',L(12,10,17.8,4.2,2.6)],['+',L(12,10,6.2,4.2,2.6)],['+',L(12,10,17.8,15.8,2.6)],['+',L(12,10,6.2,15.8,2.6)],['+',E(12,10,3,3)],['g',E(12,10,1.4,1.4)],['d',R(11.3,3,12.7,7)],['d',R(11.3,13,12.7,17)],['d',R(3.5,9.3,7.5,10.7)],['d',R(16.5,9.3,20.5,10.7)]],
+ x:[['+',P([[12,1.5],[19.5,9.5],[12,17.5],[4.5,9.5]])],['d',P([[12,5],[16,9.5],[12,14],[8,9.5]])],['g',P([[12,7],[14,9.5],[12,12],[10,9.5]])],['+',R(10,17,14,19)]],
+ s:[['+',E(12,18.2,8.6,2.3)],['+',E(12.5,14.9,7.4,2.2)],['+',E(11.5,11.8,6.2,2.1)],['+',E(15,12.5,2.9,2.9)],['+',E(16.2,10,2.9,2.9)],['+',E(15.2,7.2,2.9,2.9)],['+',E(13,5.3,2.9,2.9)],['+',E(11,4.6,2.9,2.9)],['+',E(8.6,4.4,3.7,2.9)],['+',E(5.8,4.9,2.3,1.5)],['g',E(8.4,3.7,1,1)],['+',L(3.8,5.4,1.6,6.6,0.8)],['+',L(3.8,5.4,1.8,4.1,0.8)],['+',L(3.8,5.4,1.2,5.4,0.8)],['d',L(5,18.2,19,18.2,0.8)],['d',L(6,14.9,18.5,14.9,0.8)],['d',L(7,11.8,16,11.8,0.8)],['d',(x,y)=>y>=16&&y<17.4&&((x*0.5)|0)%2===0&&x>5&&x<19],['d',(x,y)=>y>=13&&y<14.3&&((x*0.5)|0)%2===1&&x>6&&x<18],['d',(x,y)=>y>=9&&y<11&&Math.abs(x-15)<1.5],['d',(x,y)=>y>=6.2&&y<8&&Math.abs(x-15.2)<1.6],['+',L(19.6,18.2,21.8,14.8,1.8)],['+',R(7,19.5,17,20.5)]],
+ o:[['+',E(12,10.5,8.3,8.3)],['-',E(12,10.5,4.8,4.8)],['+',E(12,10.5,3,3)],['d',E(12,10.5,1.9,1.9)],['g',E(12,10.5,0.9,0.9)],['d',L(12,2.5,12,4.6,0.8)],['d',L(12,16.4,12,18.5,0.8)],['d',L(3.7,10.5,5.8,10.5,0.8)],['d',L(18.2,10.5,20.3,10.5,0.8)],['+',R(9.5,18,14.5,19.7)]],
+ a:[['+',E(12,10,9.6,9)],['-',E(12,10,7.3,6.8)],['-',R(0,0,24,10)],['+',L(3,10,21,10,1.6)],['+',L(12,2.5,12,18.5,2.4)],['+',P([[12,0.5],[16,6],[8,6]])],['g',P([[12,2],[13.5,5],[10.5,5]])],['d',L(12,14,9.5,17.8,1)],['d',L(12,14,14.5,17.8,1)],['d',L(12,16,9.5,19,1)],['d',L(12,16,14.5,19,1)]],
+ g:[['+',E(12,12.5,3.6,5.2)],['+',E(12,5.8,3.2,2.7)],['g',E(10.4,5.2,1,1.1)],['g',E(13.6,5.2,1,1.1)],['+',L(10.6,3.6,7.5,0.8,1)],['+',L(13.4,3.6,16.5,0.8,1)],['+',L(9,12,4,8.5,2.6)],['+',L(15,12,20,8.5,2.6)],['+',L(4,8.5,2.8,18,2.2)],['+',L(20,8.5,21.2,18,2.2)],['+',L(2.8,18,0.8,19.5,1.6)],['+',L(21.2,18,23.2,19.5,1.6)],['+',L(9,14.5,6,17,1.6)],['+',L(15,14.5,18,17,1.6)],['d',L(12,9.5,12,17,0.8)],['d',L(10.2,11,10.2,15.5,0.7)],['d',L(13.8,11,13.8,15.5,0.7)]]
+};
+const RPAL={
+  w:{o:'#1b1410',l:'#fffdf0',m:'#ecdca6',d:'#a8915a',g:'#d8453b',x:'#6b5632'},
+  b:{o:'#05060f',l:'#7c86dd',m:'#434aa0',d:'#222668',g:'#ffcc33',x:'#0f1140'}
+};
+function retroGrid(t){
+  const N=RS,F=Array.from({length:N},()=>Array(N).fill(0));
+  const G=new Map(); // 'd'/'g' detail layers
+  for(let y=0;y<N;y++)for(let x=0;x<N;x++){
+    const px=x+.5,py=y+.5;let on=false;
+    for(const[k,f]of[...BASEP,...RP[t]]){if(k==='+'&&f(px,py))on=true;else if(k==='-'&&f(px,py))on=false;}
+    F[y][x]=on?1:0;
+    for(const[k,f]of[...BASEP,...RP[t]])if((k==='d'||k==='g')&&f(px,py))G.set(y*N+x,k);
+  }
+  if(t!=='n'&&t!=='s'){for(let y=0;y<N;y++)for(let x=0;x<N/2;x++){const m=N-1-x;if(F[y][x]||F[y][m])F[y][x]=F[y][m]=1;const g=G.get(y*N+x)||G.get(y*N+m);if(g){G.set(y*N+x,g);G.set(y*N+m,g);}}}
+  const at=(x,y)=>x>=0&&y>=0&&x<N&&y<N&&F[y][x];
+  const out=Array.from({length:N},()=>Array(N).fill('.'));
+  for(let y=0;y<N;y++)for(let x=0;x<N;x++){
+    if(!F[y][x])continue;
+    if(!at(x-1,y)||!at(x+1,y)||!at(x,y-1)||!at(x,y+1)){out[y][x]='o';continue;}
+    let a=x,b=x;while(at(a-1,y)&&F[y][a-1])a--;while(at(b+1,y))b++;
+    const w=b-a+1,l=w>3?(x-a+.5)/w:.5;
+    let c='m';
+    if(l<.3)c='l';else if(l<.4)c=(x+y)%2?'l':'m';else if(l>.72)c='d';else if(l>.6)c=(x+y)%2?'d':'m';
+    if(!at(x,y-2)&&c==='m')c='l'; // top rim light
+    if(!at(x,y+2)&&c!=='d')c=(x+y)%2?'d':c; // bottom shade
+    out[y][x]=c;
+  }
+  G.forEach((k,i)=>{const x=i%N,y=(i/N)|0;if(out[y][x]!=='o'&&F[y][x])out[y][x]=k==='g'?'g':'x';});
+  return out.map(r=>r.join(''));
+}
+function retroURI(t,c){
+  const g=retroGrid(t),pal=RPAL[c];let r='';
+  g.forEach((row,y)=>{let x=0;while(x<row.length){const ch=row[x];if(ch==='.'){x++;continue;}let e=x;while(e<row.length&&row[e]===ch)e++;r+=`<rect x='${x}' y='${y}' width='${e-x}' height='1' fill='${pal[ch]}'/>`;x=e;}});
+  return 'data:image/svg+xml,'+encodeURIComponent(`<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 ${RS} ${RS}' shape-rendering='crispEdges'>${r}</svg>`);
+}
+
+(function(){
+  let css='';for(const t in RP)for(const c of['w','b'])css+=`.skp .pc:not(.cl).${c}.t-${t}{background-image:url("${retroURI(t,c)}")}\n`;
+  const st=document.createElement('style');st.textContent=css;document.head.appendChild(st);
+})();
+const SKIN_KEY='gigachess-skin-v2';
+const SK={p:'classic',b:'classic'};
+function setSkin(kind,n,save){
+  SK[kind]=n==='retro'?'retro':'classic';
+  document.body.classList.toggle(kind==='p'?'skp':'skb',SK[kind]==='retro');
+  document.querySelectorAll('#skins .skin[data-kind="'+kind+'"]').forEach(x=>{const on=x.dataset.skin===SK[kind];x.classList.toggle('on',on);x.setAttribute('aria-pressed',on);});
+  if(save){try{localStorage.setItem(SKIN_KEY,JSON.stringify(SK));}catch(e){}}
+  keys=[];if(started)render();
+}
+(function(){
+  const row=[['k','w'],['q','b'],['r','w'],['b','b'],['n','w'],['p','b'],['w','w'],['g','b']];
+  for(const id of['pv-classic','pv-retro'])$(id).innerHTML=row.map(([t,c],i)=>
+    `<div class="pvsq ${(i+(i>3?1:0))%2?'d':'l'}"><span class="pc ${id==='pv-classic'?'cl ':''}${c} t-${t}">${GLYPH[t]}&#xFE0E;</span></div>`).join('');
+  for(const id of['bv-classic','bv-retro'])$(id).innerHTML=row.map((_,i)=>`<div class="pvsq ${(i+(i>3?1:0))%2?'d':'l'}"></div>`).join('');
+})();
+const openSkins=()=>{$('skins').classList.add('show');const on=document.querySelector('#skins .skin.on');if(on)on.focus();};
+const closeSkins=()=>$('skins').classList.remove('show');
+$('skinbtn').onclick=openSkins;$('skclose').onclick=closeSkins;
+$('skins').addEventListener('mousedown',e=>{if(e.target.id==='skins')closeSkins();});
+document.querySelectorAll('#skins .skin').forEach(b=>b.onclick=()=>setSkin(b.dataset.kind,b.dataset.skin,true));
+addEventListener('keydown',e=>{if(e.key==='Escape'&&$('skins').classList.contains('show'))closeSkins();});
 /* ---------- save / load ---------- */
 let started=false;
 const MODES=['classic','remixed','special','sremix'],SIZES=[8,16,24,96],PIECES='kqrbnpwxsoag';
@@ -1007,6 +1174,11 @@ $('promo').onclick=e=>{if(e.target.id==='promo'){e.currentTarget.classList.remov
 
 setN();fitView();
 $('play').focus();
+try{
+  let sv=JSON.parse(localStorage.getItem(SKIN_KEY)||'null');
+  if(!sv){const o=localStorage.getItem('gigachess-skin-v1');if(o==='retro'||o==='8bit')sv={p:'retro',b:'retro'};}
+  if(sv){setSkin('p',sv.p,false);setSkin('b',sv.b,false);}
+}catch(e){}
 </script>
 </body>
 </html>
