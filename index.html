@@ -43,9 +43,24 @@ aside{width:300px;flex-shrink:0;height:100%;overflow-y:auto;background:var(--pan
 h1{margin:0;font-size:1.6rem;font-weight:600}
 #status{font-size:1.05rem;min-height:2.6em}
 #status.alert{color:var(--accent)}
-#moves{margin:0;padding:0;list-style:none;max-height:220px;overflow:auto;font-size:.95rem;
-  display:grid;grid-template-columns:2.4em 1fr 1fr;gap:3px 8px}
+#hist{position:absolute;left:0;top:0;bottom:0;width:230px;z-index:4;background:rgba(34,49,60,.96);
+  display:flex;flex-direction:column;box-shadow:6px 0 24px rgba(0,0,0,.35);
+  transform:translateX(-100%);transition:transform .22s ease}
+#hist.open{transform:none}
+#htab{position:absolute;left:100%;top:14px;display:flex;flex-direction:column;align-items:center;gap:6px;
+  background:rgba(34,49,60,.96);color:var(--ink);border:0;border-radius:0 6px 6px 0;padding:12px 7px;cursor:pointer;
+  font:600 .85rem/1 system-ui,sans-serif;box-shadow:6px 0 14px rgba(0,0,0,.25)}
+#htab:hover{color:var(--accent)}
+#htab:focus-visible{outline:2px solid var(--accent);outline-offset:-2px}
+#htab .lbl{writing-mode:vertical-rl;letter-spacing:.04em}
+#htab .cnt{background:var(--bg);border-radius:10px;padding:3px 6px;font-size:.75rem;color:var(--muted)}
+#hist h3{margin:0;padding:14px 16px 8px;font-size:1.05rem;font-weight:600}
+#moves{margin:0;padding:4px 16px 16px;list-style:none;flex:1;min-height:0;overflow-y:auto;overscroll-behavior:contain;touch-action:pan-y;
+  font-size:.98rem;display:grid;grid-template-columns:2.4em 1fr 1fr;gap:4px 8px;align-content:start}
 #moves .n{color:var(--muted)}
+#moves .cur{color:var(--accent);font-weight:600}
+#moves:empty::before{content:"No moves yet.";grid-column:1/-1;color:var(--muted)}
+@media (prefers-reduced-motion:reduce){#hist{transition:none}}
 .btns{display:flex;gap:8px;flex-wrap:wrap}
 button.act{background:transparent;color:var(--ink);border:1px solid var(--muted);border-radius:4px;
   padding:8px 12px;font:inherit;cursor:pointer}
@@ -70,6 +85,23 @@ details p{margin:8px 0;line-height:1.4}
 .opt.go:hover,.opt.go:focus-visible{border-color:#fff}
 .opt b{font-size:1.25rem;font-weight:600}
 .opt span{color:var(--muted);font-size:.95rem;line-height:1.4}
+#over{position:absolute;inset:0;z-index:5;display:none;align-items:center;justify-content:center;
+  background:radial-gradient(circle at center,rgba(24,35,43,.55),rgba(10,16,20,.88));padding:16px}
+#over.show{display:flex;animation:fadein .5s ease-out}
+.card{background:var(--panel);border:1px solid #3a4f5e;border-radius:8px;padding:28px 34px;max-width:420px;width:100%;
+  text-align:center;box-shadow:0 20px 60px rgba(0,0,0,.6);display:flex;flex-direction:column;gap:12px;align-items:center}
+.crown{font-size:72px;line-height:1;margin-bottom:-4px}
+.crown.w{color:#fff;text-shadow:0 0 3px #000,0 2px 10px rgba(230,179,74,.7)}
+.crown.b{color:#1a1a1f;text-shadow:0 0 12px rgba(230,179,74,.8),0 0 2px #fff}
+.crown.d{color:var(--muted)}
+.card h2{margin:0;font-size:2rem;font-weight:600}
+.card p{margin:0;color:var(--muted);line-height:1.4}
+.card .btns{justify-content:center;margin-top:8px}
+.card button.main{background:var(--accent);color:#18232b;border-color:var(--accent);font-weight:600}
+@keyframes fadein{from{opacity:0}to{opacity:1}}
+@keyframes rise{from{transform:translateY(14px) scale(.96);opacity:0}to{transform:none;opacity:1}}
+#over.show .card{animation:rise .5s .1s cubic-bezier(.2,.8,.2,1) both}
+@media (prefers-reduced-motion:reduce){#over.show,#over.show .card{animation:none}}
 #promo{position:fixed;inset:0;background:rgba(0,0,0,.6);display:none;align-items:center;justify-content:center;z-index:10}
 #promo.show{display:flex}
 #promo div{background:var(--panel);padding:16px;border-radius:6px;display:flex;gap:10px}
@@ -78,11 +110,17 @@ details p{margin:8px 0;line-height:1.4}
 </head>
 <body>
 <main>
-  <div id="view"><div id="board" role="grid" aria-label="Chess board"></div><div id="hint"></div></div>
+  <div id="view"><div id="board" role="grid" aria-label="Chess board"></div><div id="hint"></div>
+    <div id="hist"><button id="htab" aria-expanded="false" aria-controls="moves"><span class="lbl">Move history</span><span class="cnt" id="hcnt">0</span></button>
+      <h3>Move history</h3><ol id="moves" tabindex="0" aria-label="Move history"></ol></div>
+    <div id="over" role="dialog" aria-modal="true" aria-labelledby="ot"><div class="card">
+      <div class="crown" id="ocrown"></div>
+      <h2 id="ot"></h2><p id="osub"></p>
+      <div class="btns"><button class="act main" id="oagain">Play again</button><button class="act" id="oview">View board</button><button class="act" id="omenu">New game</button></div>
+    </div></div></div>
   <aside>
     <h1>Chess</h1>
     <div id="status" role="status" aria-live="polite"></div>
-    <ol id="moves"></ol>
     <small id="info"></small>
     <details id="guide" hidden>
       <summary>Piece guide</summary>
@@ -90,6 +128,7 @@ details p{margin:8px 0;line-height:1.4}
       <p><b>❖ Ricochet</b> slides like a bishop and may bounce once off the board edge.</p>
       <p><b>∿ Serpent</b> zigzags forward or backward, one diagonal step at a time, left then right.</p>
       <p><b>◎ Wormhole</b> steps like a king, or teleports to its mirror square across the left–right centre if empty.</p>
+      <p><b>✥ Grasshopper</b> moves like a rook but skips squares: it lands only 2, 4, 6… squares away along a rank or file, and leaps over any pieces between.</p>
       <p><b>⊕ Archer</b> moves to any empty square within 2 tiles (a 5×5 area), jumping over pieces. Instead of moving, it can shoot an enemy queen, king, knight or pawn in that area without leaving its square. It never captures by moving onto a piece.</p>
     </details>
     <div class="btns">
@@ -121,9 +160,9 @@ details p{margin:8px 0;line-height:1.4}
 <div id="promo" role="dialog" aria-label="Choose promotion piece"><div></div></div>
 
 <script>
-const GLYPH={k:'♚',q:'♛',r:'♜',b:'♝',n:'♞',p:'♟',w:'❋',x:'❖',s:'∿',o:'◎',a:'⊕'};
-const NAMES={k:'king',q:'queen',r:'rook',b:'bishop',n:'knight',p:'pawn',w:'pinwheel',x:'ricochet',s:'serpent',o:'wormhole',a:'archer'};
-let W=24;const FL='abcdefghijklmnopqrstuvwx';let PO=1,MODE='classic',useSP=false;const SP='wxsoa';
+const GLYPH={k:'♚',q:'♛',r:'♜',b:'♝',n:'♞',p:'♟',w:'❋',x:'❖',s:'∿',o:'◎',a:'⊕',g:'✥'};
+const NAMES={k:'king',q:'queen',r:'rook',b:'bishop',n:'knight',p:'pawn',w:'pinwheel',x:'ricochet',s:'serpent',o:'wormhole',a:'archer',g:'grasshopper'};
+let W=24;const FL='abcdefghijklmnopqrstuvwx';let PO=1,MODE='classic',useSP=false;const SP='wxsoag';
 const N=[[1,2],[2,1],[-1,2],[-2,1],[1,-2],[2,-1],[-1,-2],[-2,-1]];
 const K=[[1,0],[-1,0],[0,1],[0,-1],[1,1],[1,-1],[-1,1],[-1,-1]];
 const O=K.slice(0,4),D=K.slice(4);
@@ -132,15 +171,15 @@ const row=i=>Math.floor(i/W),col=i=>i%W;
 const sqName=i=>FL[col(i)]+(W-row(i));
 
 const SUP={
-  16:['','A','X','W','','S','O',''],
-  24:['','S','X','A','','W','O','','X','S','A','']
+  16:['G','A','X','W','','S','O',''],
+  24:['G','S','X','A','G','W','O','','X','S','A','']
 };
 const isSpecialMode=m=>m==='special'||m==='sremix';
 const isRemixMode=m=>m==='remixed'||m==='sremix';
 /* rows[0] is the back row; the last row is the pawn row (it can hold other pieces on 8x8 Special) */
 function baseRows(special,n){
   if(n===8)return special
-    ?{rows:[['W','O','X','Q','K','X','O','W'],['P','S','P','A','A','P','S','P']],po:1}
+    ?{rows:[['G','O','X','Q','K','X','O','G'],['P','S','P','A','A','P','S','P']],po:1}
     :{rows:[['R','N','B','Q','K','B','N','R'],Array(8).fill('P')],po:1};
   const left=n===16?['R','N','B','N','B','N','R']:['R','N','B','N','B','N','B','N','B','N','R'];
   const back=[...left,'Q','K',...left.slice().reverse()];
@@ -221,6 +260,14 @@ function special(b,i){
         const q=b[rr*W+cc];
         if(!q||enemy(q))add(rr,cc);
       }
+  }else if(k==='g'){
+    /* rook lines, but it only lands on every other square (2, 4, 6... away) and leaps over whatever is between */
+    for(const[dr,dc]of O)for(let n=2;;n+=2){
+      const rr=r+dr*n,cc=c+dc*n;
+      if(!inb(rr,cc))break;
+      const q=b[rr*W+cc];
+      if(!q||enemy(q))add(rr,cc);
+    }
   }else if(k==='x'){
     for(const[a,e]of D){
       let dr=a,dc=e,rr=r,cc=c,bounced=false;
@@ -363,7 +410,7 @@ function describe(){
 const $=id=>document.getElementById(id);
 /* ---- map-style view: wheel zooms at the cursor, right-drag pans (touch: pinch / drag) ---- */
 const viewEl=$('view'),bd=$('board'),BASE=56;
-let vk=1,vx=0,vy=0,kMin=.3,kMax=4,lastGesture=0,hintGone=false;
+let vk=1,vx=0,vy=0,kMin=.3,kMax=4,lastGesture=-1e9,hintGone=false;
 function applyView(){
   const vw=viewEl.clientWidth,vh=viewEl.clientHeight,bw=W*BASE*vk,pad=80;
   vx=Math.min(Math.max(vx,Math.min(0,vw-bw)-pad),Math.max(0,vw-bw)+pad);
@@ -423,6 +470,24 @@ const endPtr=e=>{
 viewEl.addEventListener('pointerup',endPtr);viewEl.addEventListener('pointercancel',endPtr);
 addEventListener('resize',fitView);
 
+let overDone=false;
+const histEl=$('hist');
+$('htab').onclick=()=>{const o=histEl.classList.toggle('open');$('htab').setAttribute('aria-expanded',o);if(o)$('moves').scrollTop=$('moves').scrollHeight;};
+for(const ev of['wheel','pointerdown','pointermove','pointerup','pointercancel'])histEl.addEventListener(ev,e=>e.stopPropagation());
+histEl.addEventListener('contextmenu',e=>e.stopPropagation());
+function showOver(on,chk){
+  const o=$('over');
+  if(!on){o.classList.remove('show');return;}
+  const mate=!moves.length&&chk,winner=cur.t==='w'?'Black':'White',loser=cur.t==='w'?'White':'Black';
+  const last=hist.length?hist[hist.length-1].san:'';
+  $('ocrown').className='crown '+(mate?winner[0].toLowerCase():'d');
+  $('ocrown').textContent=mate?'♚\uFE0E':'½';
+  $('ot').textContent=mate?'Checkmate':!moves.length?'Stalemate':'Draw';
+  $('osub').textContent=mate?`${winner} wins${last?' with '+last:''}. ${loser}'s king has no escape.`
+    :!moves.length?`${loser} has no legal moves but is not in check, so the game is drawn.`
+    :'Neither side has enough material left to checkmate.';
+  o.classList.add('show');$('oagain').focus();
+}
 function render(){
   moves=legal(cur);
   const chk=inCheck(cur),last=hist.length?hist[hist.length-1].m:null,ks=kingSq(cur.b,cur.t);
@@ -445,6 +510,9 @@ function render(){
     boardEl.appendChild(d);
   }
   const who=cur.t==='w'?'White':'Black',st=$('status');
+  const ended=!moves.length||insufficient(cur.b);
+  if(!ended)overDone=false;
+  showOver(ended&&!overDone,chk);
   st.className='';
   if(!moves.length){st.className='alert';st.textContent=chk?`Checkmate. ${cur.t==='w'?'Black':'White'} wins.`:'Stalemate. The game is a draw.';}
   else if(insufficient(cur.b)){st.className='alert';st.textContent='Draw: not enough material to checkmate.';}
@@ -452,8 +520,9 @@ function render(){
   const ol=$('moves');ol.innerHTML='';
   hist.forEach((h,idx)=>{
     if(idx%2===0){const n=document.createElement('li');n.className='n';n.textContent=(idx/2+1)+'.';ol.appendChild(n);}
-    const li=document.createElement('li');li.textContent=h.san;ol.appendChild(li);
+    const li=document.createElement('li');li.textContent=h.san;if(idx===hist.length-1)li.className='cur';ol.appendChild(li);
   });
+  $('hcnt').textContent=hist.length;
   ol.scrollTop=ol.scrollHeight;
 }
 
@@ -490,7 +559,7 @@ function choosePromo(ms){
 $('undo').onclick=()=>{if(hist.length){cur=hist.pop().s;sel=null;render();}};
 $('flip').onclick=()=>{flip=!flip;render();};
 function startGame(m,n){
-  MODE=m;W=n;cur=startState();hist=[];sel=null;flip=false;
+  overDone=false;MODE=m;W=n;cur=startState();hist=[];sel=null;flip=false;
   setN();fitView();
   hintGone=false;$('hint').classList.remove('gone');
   $('hint').textContent=matchMedia('(pointer:coarse)').matches?'Pinch to zoom · drag to move around':'Scroll to zoom · hold right-click and drag to move around';
@@ -500,6 +569,9 @@ function startGame(m,n){
   render();
 }
 $('new').onclick=()=>startGame(MODE,W);
+$('oagain').onclick=()=>startGame(MODE,W);
+$('oview').onclick=()=>{overDone=true;$('over').classList.remove('show');};
+$('omenu').onclick=()=>{overDone=true;$('over').classList.remove('show');$('menu').classList.add('show');};
 $('mn').onclick=()=>{if(!hist.length||confirm('Leave this game and start a new one?'))$('menu').classList.add('show');};
 let pickMode='classic',pickN=8;
 function choose(groupId,attr,val){
