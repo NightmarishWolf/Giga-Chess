@@ -104,6 +104,30 @@ details p{margin:8px 0;line-height:1.4}
 @keyframes rise{from{transform:translateY(14px) scale(.96);opacity:0}to{transform:none;opacity:1}}
 #over.show .card{animation:rise .5s .1s cubic-bezier(.2,.8,.2,1) both}
 @media (prefers-reduced-motion:reduce){#over.show,#over.show .card{animation:none}}
+#sl{position:fixed;inset:0;z-index:30;display:none;background:rgba(10,16,20,.8);padding:16px;overflow:auto}
+#sl.show{display:flex}
+#sl .card{max-width:580px;margin:auto;text-align:left;align-items:stretch;gap:14px;padding:24px 26px}
+#sl h2{font-size:1.5rem}
+#sl h3{margin:0;font-size:1rem;font-weight:600}
+#sl section{display:flex;flex-direction:column;gap:8px}
+#sl .btns{justify-content:flex-start;margin-top:0}
+#slcode,#slname{width:100%;background:var(--bg);color:var(--ink);border:1px solid #3a4f5e;border-radius:4px;padding:8px 10px;font:inherit}
+#slcode{height:92px;resize:vertical;font:.8rem/1.3 ui-monospace,Menlo,Consolas,monospace;word-break:break-all}
+#slcode:focus,#slname:focus{outline:2px solid var(--accent);outline-offset:0}
+#sllist{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:6px;max-height:230px;overflow-y:auto;overscroll-behavior:contain}
+#sllist li{display:flex;align-items:center;gap:8px;background:var(--bg);border-radius:4px;padding:8px 10px}
+#sllist .nm{flex:1;min-width:0}
+#sllist .nm b{display:block;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+#sllist .nm span{color:var(--muted);font-size:.85rem}
+#sllist .none{color:var(--muted);justify-content:center}
+.row{display:flex;gap:8px}
+.row #slname{flex:1}
+#slmsg{min-height:1.4em;color:var(--muted)}
+#slmsg.bad{color:#ff9d8f}#slmsg.good{color:#9fe3a8}
+button.act:disabled{opacity:.4;cursor:not-allowed}
+button.act:disabled:hover{border-color:var(--muted);color:var(--ink)}
+#menuload{align-self:center;background:transparent;border:1px solid var(--muted);color:var(--ink);border-radius:4px;padding:8px 14px;font:inherit;cursor:pointer}
+#menuload:hover{border-color:var(--accent);color:var(--accent)}
 #promo{position:fixed;inset:0;background:rgba(0,0,0,.6);display:none;align-items:center;justify-content:center;z-index:10}
 #promo.show{display:flex}
 #promo div{background:var(--panel);padding:16px;border-radius:6px;display:flex;gap:10px}
@@ -139,6 +163,7 @@ details p{margin:8px 0;line-height:1.4}
       <button class="act" id="new">Restart</button>
       <button class="act" id="mn">New game</button>
       <button class="act" id="fit">Reset view</button>
+      <button class="act" id="sls">Save / load</button>
     </div>
   </aside>
 </main>
@@ -174,6 +199,23 @@ details p{margin:8px 0;line-height:1.4}
     </div>
   </div>
   <button class="opt go" id="play">Play</button>
+  <button id="menuload">Load a saved game</button>
+</div></div>
+<div id="sl" role="dialog" aria-modal="true" aria-labelledby="slt"><div class="card">
+  <h2 id="slt">Save or load a game</h2>
+  <section>
+    <h3>Game code</h3>
+    <p>Copy the code to keep this game anywhere. Paste a code here to load a game.</p>
+    <textarea id="slcode" spellcheck="false" placeholder="Paste a game code here"></textarea>
+    <div class="btns"><button class="act" id="slget">Copy code for this game</button><button class="act main" id="slload">Load pasted code</button></div>
+  </section>
+  <section>
+    <h3>Saved in this browser</h3>
+    <div class="row"><input id="slname" maxlength="40" placeholder="Name this save (optional)" aria-label="Save name"><button class="act" id="slsave">Save</button></div>
+    <ul id="sllist"></ul>
+  </section>
+  <div id="slmsg" role="status"></div>
+  <div class="btns"><button class="act" id="slclose">Close</button></div>
 </div></div>
 <div id="promo" role="dialog" aria-label="Choose promotion piece"><div></div></div>
 
@@ -813,7 +855,7 @@ $('undo').onclick=()=>{
 };
 $('flip').onclick=()=>{flip=!flip;render();};
 function startGame(m,n){
-  cancelAI();overDone=false;MODE=m;W=n;cur=startState();hist=[];sel=null;flip=!!AI.level&&humanSide==='b';
+  cancelAI();overDone=false;started=true;MODE=m;W=n;cur=startState();hist=[];sel=null;flip=!!AI.level&&humanSide==='b';
   setN();fitView();
   hintGone=false;$('hint').classList.remove('gone');
   $('hint').textContent=matchMedia('(pointer:coarse)').matches?'Pinch to zoom · drag to move around':'Scroll to zoom · hold right-click and drag to move around';
@@ -827,6 +869,123 @@ $('oagain').onclick=()=>startGame(MODE,W);
 $('oview').onclick=()=>{overDone=true;$('over').classList.remove('show');};
 $('omenu').onclick=()=>{overDone=true;$('over').classList.remove('show');$('menu').classList.add('show');};
 $('mn').onclick=()=>{if(!hist.length||confirm('Leave this game and start a new one?'))$('menu').classList.add('show');};
+/* ---------- save / load ---------- */
+let started=false;
+const MODES=['classic','remixed','special','sremix'],SIZES=[8,16,24,96],PIECES='kqrbnpwxsoag';
+const MODE_TITLE={classic:'Classic',remixed:'Remixed',special:'Special',sremix:'Special Remixed'};
+function boardToStr(b,n){
+  const rows=[];
+  for(let r=0;r<n;r++){let o='',run=0;
+    for(let c=0;c<n;c++){const p=b[r*n+c];if(!p)run++;else{if(run){o+=run;run=0;}o+=p;}}
+    if(run)o+=run;rows.push(o);}
+  return rows.join('/');
+}
+function strToBoard(str,n){
+  const rows=str.split('/');if(rows.length!==n)throw new Error('The board has the wrong number of rows.');
+  const b=[];
+  for(const row of rows){
+    let c=0;const re=/(\d+)|([A-Za-z])/g;let m;
+    while((m=re.exec(row))){
+      if(m[1]){const k=+m[1];c+=k;for(let i=0;i<k;i++)b.push('');}
+      else{if(!PIECES.includes(m[2].toLowerCase()))throw new Error('Unknown piece "'+m[2]+'".');c++;b.push(m[2]);}
+    }
+    if(c!==n)throw new Error('A board row has the wrong width.');
+  }
+  return b;
+}
+function exportGame(){
+  const init=hist.length?hist[0].s:cur;
+  const obj={v:1,m:MODE,n:W,o:AI.level||'',h:humanSide,t:init.t,
+    c:''+init.c.wK+init.c.wQ+init.c.bK+init.c.bQ,e:init.ep,b:boardToStr(init.b,W),
+    mv:hist.map(h=>[h.m.f,h.m.t,h.m.promo||'',h.m.shoot?1:0])};
+  return 'GC1.'+btoa(JSON.stringify(obj));
+}
+function importGame(code){
+  code=(code||'').trim();
+  if(!code.startsWith('GC1.'))throw new Error('This does not look like a game code. Codes start with GC1.');
+  let o;
+  try{o=JSON.parse(atob(code.slice(4).replace(/\s+/g,'')));}catch(e){throw new Error('The code is damaged or incomplete.');}
+  if(!o||o.v!==1||!MODES.includes(o.m)||!SIZES.includes(o.n)||!['w','b'].includes(o.t)||!Array.isArray(o.mv))throw new Error('The code is not a valid game.');
+  const n=o.n,b=strToBoard(o.b,n);
+  if(b.filter(p=>p==='K').length!==1||b.filter(p=>p==='k').length!==1)throw new Error('Each side needs exactly one king.');
+  const cs=String(o.c||'0000');
+  const init={b,t:o.t,c:{wK:+cs[0]||0,wQ:+cs[1]||0,bK:+cs[2]||0,bQ:+cs[3]||0},ep:Number.isInteger(o.e)?o.e:-1};
+  return {o,init};
+}
+function applyLoaded({o,init}){
+  /* all-or-nothing: rebuild the game first; if anything is wrong, put every setting back */
+  const prev={MODE,W,PO,useSP,lvl:AI.level,hs:humanSide,cur,hist,sel};
+  try{
+    MODE=o.m;W=o.n;
+    const base=baseRows(isSpecialMode(MODE),W);PO=base.po;useSP=isSpecialMode(MODE);
+    AI.level=['easy','medium','hard'].includes(o.o)?o.o:null;humanSide=o.h==='b'?'b':'w';
+    let c=init;const h=[];
+    for(let i=0;i<o.mv.length;i++){
+      const[f,t,pr,sh]=o.mv[i],L=legal(c);
+      const m=L.find(x=>x.f===f&&x.t===t&&(x.promo||'')===(pr||'')&&!!x.shoot===!!sh);
+      if(!m)throw new Error('Move '+(i+1)+' in the code is not legal, so the game cannot be rebuilt.');
+      h.push({s:c,m,san:san(c,m,L)});c=apply(c,m);
+    }
+    cur=c;hist=h;
+  }catch(e){
+    MODE=prev.MODE;W=prev.W;PO=prev.PO;useSP=prev.useSP;AI.level=prev.lvl;humanSide=prev.hs;cur=prev.cur;hist=prev.hist;sel=prev.sel;
+    throw e;
+  }
+  cancelAI();
+  sel=null;overDone=false;thinking=false;flip=!!AI.level&&humanSide==='b';started=true;
+  setN();fitView();
+  $('info').textContent=describe();$('guide').hidden=!isSpecialMode(MODE);
+  $('menu').classList.remove('show');$('sl').classList.remove('show');
+  render();maybeAI();
+}
+const LS_KEY='gigachess-saves-v1';
+function readSaves(){try{const a=JSON.parse(localStorage.getItem(LS_KEY)||'[]');return Array.isArray(a)?a:[];}catch(e){return null;}}
+function writeSaves(a){try{localStorage.setItem(LS_KEY,JSON.stringify(a));return true;}catch(e){return false;}}
+function slMsg(t,cls){const m=$('slmsg');m.textContent=t||'';m.className=cls||'';}
+function renderSaves(){
+  const ul=$('sllist');ul.innerHTML='';const a=readSaves();
+  if(a===null){ul.innerHTML='<li class="none">This browser is not allowing local saves. Use a game code instead.</li>';$('slsave').disabled=true;return;}
+  $('slsave').disabled=!started;
+  if(!a.length){ul.innerHTML='<li class="none">No saved games yet.</li>';return;}
+  a.slice().reverse().forEach(sv=>{
+    const li=document.createElement('li'),nm=document.createElement('div');nm.className='nm';
+    const b=document.createElement('b');b.textContent=sv.name;const sp=document.createElement('span');sp.textContent=sv.info+' · '+new Date(sv.ts).toLocaleString();
+    nm.append(b,sp);
+    const ld=document.createElement('button');ld.className='act';ld.textContent='Load';
+    ld.onclick=()=>{try{applyLoaded(importGame(sv.code));}catch(e){slMsg(e.message,'bad');}};
+    const dl=document.createElement('button');dl.className='act';dl.textContent='Delete';
+    dl.onclick=()=>{writeSaves((readSaves()||[]).filter(x=>x.id!==sv.id));renderSaves();slMsg('Deleted "'+sv.name+'".');};
+    li.append(nm,ld,dl);ul.appendChild(li);
+  });
+}
+function openSL(){
+  $('slcode').value='';slMsg('');
+  $('slget').disabled=!started;
+  renderSaves();$('sl').classList.add('show');$('slcode').focus();
+}
+const closeSL=()=>$('sl').classList.remove('show');
+$('sls').onclick=openSL;$('menuload').onclick=openSL;$('slclose').onclick=closeSL;
+$('sl').addEventListener('mousedown',e=>{if(e.target.id==='sl')closeSL();});
+addEventListener('keydown',e=>{if(e.key==='Escape'&&$('sl').classList.contains('show'))closeSL();});
+$('slget').onclick=async()=>{
+  const code=exportGame(),ta=$('slcode');ta.value=code;ta.focus();ta.select();
+  let copied=false;try{await navigator.clipboard.writeText(code);copied=true;}catch(e){try{copied=document.execCommand('copy');}catch(e2){}}
+  slMsg(copied?'Code copied. Paste it into "Load pasted code" any time.':'Select the code above and copy it (Ctrl+C).',copied?'good':'');
+};
+$('slload').onclick=()=>{
+  try{applyLoaded(importGame($('slcode').value));}
+  catch(e){slMsg(e.message,'bad');}
+};
+$('slsave').onclick=()=>{
+  if(!started)return;
+  const a=readSaves();if(a===null){slMsg('This browser is not allowing local saves.','bad');return;}
+  const name=($('slname').value.trim())||(MODE_TITLE[MODE]+' '+W+'×'+W+' game '+(a.length+1));
+  a.push({id:Date.now()+'-'+Math.random().toString(36).slice(2,7),name,ts:Date.now(),code:exportGame(),
+    info:MODE_TITLE[MODE]+' '+W+'×'+W+' · '+hist.length+' move'+(hist.length===1?'':'s')+(AI.level?' · vs '+AI.level+' AI':'')});
+  while(a.length>25)a.shift();
+  if(!writeSaves(a)){a.pop();slMsg('Could not save: the browser storage is full or blocked. Use a game code instead.','bad');return;}
+  $('slname').value='';renderSaves();slMsg('Saved "'+name+'".','good');
+};
 let pickMode='classic',pickN=8;
 function choose(groupId,attr,val){
   document.querySelectorAll('#'+groupId+' .opt').forEach(b=>{
