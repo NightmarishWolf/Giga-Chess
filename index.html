@@ -154,6 +154,7 @@ details p{margin:8px 0;line-height:1.4}
     <button class="opt on" aria-pressed="true" data-n="8"><b>8×8</b><span>The traditional board.</span></button>
     <button class="opt" aria-pressed="false" data-n="16"><b>16×16</b><span>Four times the squares.</span></button>
     <button class="opt" aria-pressed="false" data-n="24"><b>24×24</b><span>A very big battlefield.</span></button>
+    <button class="opt" aria-pressed="false" data-n="96"><b>Mega 96×96</b><span>Four rows of pieces per side. Huge: expect long games.</span></button>
   </div>
   <button class="opt go" id="play">Play</button>
 </div></div>
@@ -162,13 +163,14 @@ details p{margin:8px 0;line-height:1.4}
 <script>
 const GLYPH={k:'♚',q:'♛',r:'♜',b:'♝',n:'♞',p:'♟',w:'❋',x:'❖',s:'∿',o:'◎',a:'⊕',g:'✥'};
 const NAMES={k:'king',q:'queen',r:'rook',b:'bishop',n:'knight',p:'pawn',w:'pinwheel',x:'ricochet',s:'serpent',o:'wormhole',a:'archer',g:'grasshopper'};
-let W=24;const FL='abcdefghijklmnopqrstuvwx';let PO=1,MODE='classic',useSP=false;const SP='wxsoag';
+let W=24;const FL='abcdefghijklmnopqrstuvwxyz';let PO=1,MODE='classic',useSP=false;const SP='wxsoag';
 const N=[[1,2],[2,1],[-1,2],[-2,1],[1,-2],[2,-1],[-1,-2],[-2,-1]];
 const K=[[1,0],[-1,0],[0,1],[0,-1],[1,1],[1,-1],[-1,1],[-1,-1]];
 const O=K.slice(0,4),D=K.slice(4);
 const isW=p=>p===p.toUpperCase();
 const row=i=>Math.floor(i/W),col=i=>i%W;
-const sqName=i=>FL[col(i)]+(W-row(i));
+const colName=c=>c<26?FL[c]:FL[Math.floor(c/26)-1]+FL[c%26];
+const sqName=i=>colName(col(i))+(W-row(i));
 
 const SUP={
   16:['G','A','X','W','','S','O',''],
@@ -181,6 +183,17 @@ function baseRows(special,n){
   if(n===8)return special
     ?{rows:[['G','O','X','Q','K','X','O','G'],['P','S','P','A','A','P','S','P']],po:1}
     :{rows:[['R','N','B','Q','K','B','N','R'],Array(8).fill('P')],po:1};
+  if(n===96){
+    const mir=h=>[...h,...h.slice().reverse()];
+    const half=f=>Array.from({length:48},(_,j)=>f(j));
+    const left=Array.from({length:47},(_,j)=>j===0||j===46?'R':j%2?'N':'B');
+    const back=[...left,'Q','K',...left.slice().reverse()];
+    const minors=mir(half(j=>j%2?'N':'B'));
+    const pawns=Array(96).fill('P');
+    if(!special)return {rows:[back,minors,mir(half(j=>j===47?'Q':j%6===0?'R':'N')),pawns],po:3};
+    const SUP12=['G','S','X','A','G','W','O','','X','S','A',''];
+    return {rows:[back,mir(half(j=>SUP12[j%12])),minors,pawns],po:3};
+  }
   const left=n===16?['R','N','B','N','B','N','R']:['R','N','B','N','B','N','B','N','B','N','R'];
   const back=[...left,'Q','K',...left.slice().reverse()];
   const pawns=Array(n).fill('P');
@@ -217,7 +230,7 @@ function startState(){
   return build(base.rows,base.rows);
 }
 
-function attacked(b,sq,by){
+function attacked(b,sq,by,list){
   if(sq<0)return false;
   const r=row(sq),c=col(sq),w=by==='w';
   const own=ch=>w?ch.toUpperCase():ch.toLowerCase();
@@ -235,9 +248,16 @@ function attacked(b,sq,by){
     }
   }
   if(useSP&&b[sq]){
-    for(let i=0;i<W*W;i++){
-      const p=b[i];
-      if(!p||isW(p)!==w||!SP.includes(p.toLowerCase()))continue;
+    let L=list;
+    if(!L){L=[];for(let i=0;i<b.length;i++){const p=b[i];if(p&&isW(p)===w&&SP.includes(p.toLowerCase()))L.push(i);}}
+    for(const i of L){
+      const p=b[i];if(!p||isW(p)!==w)continue;
+      const k=p.toLowerCase(),dr=Math.abs(row(i)-r),dc=Math.abs(col(i)-c);
+      if(k==='a'){if(dr>2||dc>2)continue;}
+      else if(k==='o'){if(dr>1||dc>1)continue;}
+      else if(k==='g'){if(dr&&dc)continue;}
+      else if(k==='w'){if(dr<5||dr>7||dc<5||dc>7)continue;}
+      else if(k==='s'){if(dc>1)continue;}
       for(const m of special(b,i))if(m.t===sq)return true;
     }
   }
@@ -374,7 +394,28 @@ function apply(s,m){
 
 const kingSq=(b,t)=>b.indexOf(t==='w'?'K':'k');
 const inCheck=s=>attacked(s.b,kingSq(s.b,s.t),s.t==='w'?'b':'w');
-const legal=s=>pseudo(s).filter(m=>{const n=apply(s,m);return !attacked(n.b,kingSq(n.b,s.t),n.t);});
+function legal(s){
+  const b=s.b,w=s.t==='w',foe=w?'b':'w',ksq=kingSq(b,s.t),out=[];
+  let list=null;
+  if(useSP){list=[];for(let i=0;i<b.length;i++){const p=b[i];if(p&&isW(p)!==w&&SP.includes(p.toLowerCase()))list.push(i);}}
+  for(const m of pseudo(s)){
+    let safe;
+    if(m.castle){safe=!attacked(apply(s,m).b,m.t,foe,list);}
+    else{
+      const from=b[m.f],to=b[m.t];
+      if(m.shoot){b[m.t]='';safe=!attacked(b,ksq,foe,list);b[m.t]=to;}
+      else{
+        const es=m.ep?m.t+(w?W:-W):-1,ep=es>=0?b[es]:'';
+        if(es>=0)b[es]='';
+        b[m.t]=from;b[m.f]='';
+        safe=!attacked(b,from.toLowerCase()==='k'?m.t:ksq,foe,list);
+        b[m.f]=from;b[m.t]=to;if(es>=0)b[es]=ep;
+      }
+    }
+    if(safe)out.push(m);
+  }
+  return out;
+}
 
 function insufficient(b){
   const rest=b.filter(p=>p&&p.toLowerCase()!=='k').map(p=>p.toLowerCase());
@@ -386,11 +427,11 @@ function san(s,m,L){
   let t;
   const cap=s.b[m.t]||m.ep;
   if(m.castle)t=m.castle==='K'?'O-O':'O-O-O';
-  else if(k==='p')t=(cap?FL[col(m.f)]+'x':'')+sqName(m.t)+(m.promo?'='+m.promo.toUpperCase():'');
+  else if(k==='p')t=(cap?colName(col(m.f))+'x':'')+sqName(m.t)+(m.promo?'='+m.promo.toUpperCase():'');
   else{
     const o=L.filter(x=>x!==m&&x.t===m.t&&s.b[x.f]===p);
     let dis='';
-    if(o.length)dis=o.every(x=>col(x.f)!==col(m.f))?FL[col(m.f)]:o.every(x=>row(x.f)!==row(m.f))?String(W-row(m.f)):sqName(m.f);
+    if(o.length)dis=o.every(x=>col(x.f)!==col(m.f))?colName(col(m.f)):o.every(x=>row(x.f)!==row(m.f))?String(W-row(m.f)):sqName(m.f);
     t=k.toUpperCase()+dis+(cap?'x':'')+sqName(m.t);
   }
   const n=apply(s,m);
@@ -403,9 +444,9 @@ let cur=startState(),hist=[],sel=null,flip=false,moves=[];
 function describe(){
   const special=isSpecialMode(MODE),remix=isRemixMode(MODE);
   const cnt={};baseRows(special,W).rows.forEach(r=>r.forEach(p=>{if(p)cnt[p]=(cnt[p]||0)+1;}));
-  const parts=[...'KQRBNWXSOAP'].filter(c=>cnt[c]).map(c=>{const n=cnt[c],nm=NAMES[c.toLowerCase()];return n+' '+(n===1?nm:nm+'s');});
+  const parts=[...'KQRBNWXSOAGP'].filter(c=>cnt[c]).map(c=>{const n=cnt[c],nm=NAMES[c.toLowerCase()];return n+' '+(n===1?nm:nm+'s');});
   const title={classic:'Classic',remixed:'Remixed',special:'Special',sremix:'Special Remixed'}[MODE];
-  return `${title}, ${W}×${W}. Each side: ${parts.join(', ')}.`
+  return `${title}, ${W===96?'Mega ':''}${W}×${W}. Each side: ${parts.join(', ')}.`
     +(remix?' Pieces are shuffled separately for each side (pawns stay put).':'')
     +((MODE==='classic'&&W===8)?'':' No castling.');
 }
@@ -472,6 +513,39 @@ const endPtr=e=>{
 viewEl.addEventListener('pointerup',endPtr);viewEl.addEventListener('pointercancel',endPtr);
 addEventListener('resize',fitView);
 
+let sqEls=[],keys=[],baseCls=[],builtW=0,builtFlip=null;
+function buildBoard(){
+  const boardEl=$('board');boardEl.innerHTML='';
+  sqEls=new Array(W*W);keys=new Array(W*W);baseCls=new Array(W*W);
+  const frag=document.createDocumentFragment();
+  for(let n=0;n<W*W;n++){
+    const i=flip?W*W-1-n:n,d=document.createElement('button');
+    baseCls[i]='sq '+((row(i)+col(i))%2?'d':'l');d.className=baseCls[i];d.dataset.i=i;
+    sqEls[i]=d;frag.appendChild(d);
+  }
+  boardEl.appendChild(frag);builtW=W;builtFlip=flip;
+}
+function updateBoard(chk,ks,last,targets,shots){
+  if(builtW!==W||builtFlip!==flip||!sqEls.length)buildBoard();
+  const tset=new Set(targets);
+  for(let i=0;i<W*W;i++){
+    const p=cur.b[i];
+    const fl=(last&&(i===last.f||i===last.t)?1:0)|(i===sel?2:0)|(chk&&i===ks?4:0);
+    const mk=tset.has(i)?(shots.has(i)?'s':p?'c':'d'):'';
+    const key=p+'|'+fl+mk;
+    if(keys[i]===key)continue;keys[i]=key;
+    const d=sqEls[i],r=row(i),f=col(i);
+    d.className=baseCls[i]+(fl&1?' last':'')+(fl&2?' sel':'')+(fl&4?' chk':'');
+    d.setAttribute('aria-label',sqName(i)+(p?' '+(isW(p)?'white ':'black ')+NAMES[p.toLowerCase()]:' empty'));
+    let h='';
+    if(p)h+=`<span class="pc ${isW(p)?'w':'b'}">${GLYPH[p.toLowerCase()]}&#xFE0E;</span>`;
+    if(mk)h+=`<span class="${mk==='s'?'shoot':mk==='c'?'cap':'dot'}"></span>`;
+    if(flip?r===0:r===W-1)h+=`<span class="co f">${colName(f)}</span>`;
+    if(flip?f===W-1:f===0)h+=`<span class="co r">${W-r}</span>`;
+    d.innerHTML=h;
+  }
+}
+$('board').addEventListener('click',e=>{const q=e.target.closest('.sq');if(q)click(+q.dataset.i);});
 let overDone=false;
 const histEl=$('hist');
 $('htab').onclick=()=>{const o=histEl.classList.toggle('open');$('htab').setAttribute('aria-expanded',o);if(o)$('moves').scrollTop=$('moves').scrollHeight;};
@@ -495,22 +569,7 @@ function render(){
   const chk=inCheck(cur),last=hist.length?hist[hist.length-1].m:null,ks=kingSq(cur.b,cur.t);
   const targets=sel===null?[]:moves.filter(m=>m.f===sel).map(m=>m.t);
   const shots=new Set(sel===null?[]:moves.filter(m=>m.f===sel&&m.shoot).map(m=>m.t));
-  const boardEl=$('board');boardEl.innerHTML='';
-  for(let n=0;n<W*W;n++){
-    const i=flip?W*W-1-n:n,r=row(i),f=col(i),p=cur.b[i];
-    const d=document.createElement('button');
-    d.className='sq '+((r+f)%2?'d':'l');
-    if(last&&(i===last.f||i===last.t))d.classList.add('last');
-    if(i===sel)d.classList.add('sel');
-    if(chk&&i===ks)d.classList.add('chk');
-    d.setAttribute('aria-label',sqName(i)+(p?' '+(isW(p)?'white ':'black ')+NAMES[p.toLowerCase()]:' empty'));
-    if(p){const s=document.createElement('span');s.className='pc '+(isW(p)?'w':'b');s.textContent=GLYPH[p.toLowerCase()]+'\uFE0E';d.appendChild(s);}
-    if(targets.includes(i)){const m=document.createElement('span');m.className=shots.has(i)?'shoot':p?'cap':'dot';d.appendChild(m);}
-    if(flip?r===0:r===W-1){const e=document.createElement('span');e.className='co f';e.textContent=FL[f];d.appendChild(e);}
-    if(flip?f===W-1:f===0){const e=document.createElement('span');e.className='co r';e.textContent=W-r;d.appendChild(e);}
-    d.onclick=()=>click(i);
-    boardEl.appendChild(d);
-  }
+  updateBoard(chk,ks,last,targets,shots);
   const who=cur.t==='w'?'White':'Black',st=$('status');
   const ended=!moves.length||insufficient(cur.b);
   if(!ended)overDone=false;
