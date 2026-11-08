@@ -71,15 +71,17 @@ details{font-size:.9rem;color:var(--muted)}
 summary{cursor:pointer;color:var(--ink)}
 details p{margin:8px 0;line-height:1.4}
 .shoot{position:absolute;inset:5%;border-radius:50%;border:4px dashed #ffd21f;box-shadow:0 0 0 2px rgba(24,35,43,.75),inset 0 0 0 2px rgba(24,35,43,.75);z-index:2;pointer-events:none}
-#menu{position:fixed;inset:0;background:var(--bg);display:none;align-items:center;justify-content:center;z-index:20;padding:16px;overflow:auto}
+#menu{position:fixed;inset:0;background:var(--bg);display:none;z-index:20;padding:16px;overflow:auto}
 #menu.show{display:flex}
-.mbox{max-width:680px;width:100%;display:flex;flex-direction:column;gap:14px}
+.mbox{max-width:960px;width:100%;margin:auto;display:flex;flex-direction:column;gap:12px}
 .mbox h1{font-size:2.2rem}
 .opt{display:flex;flex-direction:column;gap:4px;text-align:left;background:var(--panel);color:var(--ink);
   border:1px solid transparent;border-radius:6px;padding:16px 18px;font:inherit;cursor:pointer}
 .opt:hover,.opt:focus-visible{border-color:var(--accent);outline:none}
 .opt.on{border-color:var(--accent);background:#2b3d4a}
 .grp{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:10px}
+#sidewrap{display:flex;flex-direction:column;gap:12px}
+#sidewrap[hidden]{display:none}
 .mbox h2{margin:6px 0 0;font-size:1rem;font-weight:600;color:var(--muted)}
 .opt.go{align-items:center;background:var(--accent);color:#18232b;font-weight:600;font-size:1.1rem}
 .opt.go:hover,.opt.go:focus-visible{border-color:#fff}
@@ -156,11 +158,26 @@ details p{margin:8px 0;line-height:1.4}
     <button class="opt" aria-pressed="false" data-n="24"><b>24×24</b><span>A very big battlefield.</span></button>
     <button class="opt" aria-pressed="false" data-n="96"><b>Mega 96×96</b><span>Four rows of pieces per side. Huge: expect long games.</span></button>
   </div>
+  <h2>Opponent</h2>
+  <div class="grp" id="opps">
+    <button class="opt on" aria-pressed="true" data-opp="pvp"><b>Two players</b><span>Take turns on this screen.</span></button>
+    <button class="opt" aria-pressed="false" data-opp="easy"><b>Easy AI</b><span>Grabs free pieces but misses threats.</span></button>
+    <button class="opt" aria-pressed="false" data-opp="medium"><b>Medium AI</b><span>Looks a few moves ahead.</span></button>
+    <button class="opt" aria-pressed="false" data-opp="hard"><b>Hard AI</b><span>Plans several moves ahead. Thinks longer on big boards.</span></button>
+  </div>
+  <div id="sidewrap" hidden>
+    <h2>You play as</h2>
+    <div class="grp" id="sides">
+      <button class="opt on" aria-pressed="true" data-side="w"><b>White</b><span>You move first.</span></button>
+      <button class="opt" aria-pressed="false" data-side="b"><b>Black</b><span>The computer moves first.</span></button>
+      <button class="opt" aria-pressed="false" data-side="r"><b>Random</b><span>Pick a side for me.</span></button>
+    </div>
+  </div>
   <button class="opt go" id="play">Play</button>
 </div></div>
 <div id="promo" role="dialog" aria-label="Choose promotion piece"><div></div></div>
 
-<script>
+<script id="logic">
 const GLYPH={k:'♚',q:'♛',r:'♜',b:'♝',n:'♞',p:'♟',w:'❋',x:'❖',s:'∿',o:'◎',a:'⊕',g:'✥'};
 const NAMES={k:'king',q:'queen',r:'rook',b:'bishop',n:'knight',p:'pawn',w:'pinwheel',x:'ricochet',s:'serpent',o:'wormhole',a:'archer',g:'grasshopper'};
 let W=24;const FL='abcdefghijklmnopqrstuvwxyz';let PO=1,MODE='classic',useSP=false;const SP='wxsoag';
@@ -439,7 +456,169 @@ function san(s,m,L){
   return t;
 }
 
+</script>
+<script id="engine">
+/* ---------- Computer opponent (also runs inside a Web Worker) ---------- */
+const VAL={p:100,n:320,b:330,r:500,q:900,k:0,w:380,x:450,s:300,o:280,a:420,g:350};
+const MATE=100000;
+function pst(p,sq){
+  const k=p.toLowerCase();
+  if(k==='k')return 0;
+  const r=row(sq),c=col(sq);
+  if(k==='p'){
+    const white=isW(p),start=white?W-1-PO:PO,adv=white?start-r:r-start;
+    return Math.max(0,adv)*Math.max(2,Math.round(40/(W/2)));
+  }
+  const mid=(W-1)/2,dist=Math.abs(r-mid)+Math.abs(c-mid);
+  return Math.round(((k==='r'||k==='q')?12:25)*(1-dist/(W-1)));
+}
+/* score change for the side that makes move m (material + position) */
+function delta(s,m){
+  const b=s.b,p=b[m.f],w=s.t==='w',vs=m.ep?m.t+(w?W:-W):m.t,q=b[vs];
+  let d=q?VAL[q.toLowerCase()]+pst(q,vs):0;
+  if(m.shoot)return d;
+  const after=m.promo?(w?m.promo.toUpperCase():m.promo):p;
+  return d+(m.promo?VAL[m.promo]-VAL.p:0)+pst(after,m.t)-pst(p,m.f);
+}
+function ordKey(s,m){
+  const p=s.b[m.f],vs=m.ep?m.t+(s.t==='w'?W:-W):m.t,q=s.b[vs];
+  return (q?VAL[q.toLowerCase()]*10-VAL[p.toLowerCase()]/10:0)+(m.promo?VAL[m.promo]:0);
+}
+function staticEval(s){
+  let ev=0;const w=s.t==='w';
+  for(let i=0;i<s.b.length;i++){const p=s.b[i];if(p){const v=VAL[p.toLowerCase()]+pst(p,i);ev+=isW(p)===w?v:-v;}}
+  return ev;
+}
+let nodes=0,deadline=Infinity,aborted=false,QD=0;
+const tick=()=>{if((++nodes&1023)===0&&Date.now()>deadline)aborted=true;};
+const isKing=q=>q&&q.toLowerCase()==='k';
+
+function qsearch(s,alpha,beta,ev,qd){
+  tick();if(aborted)return 0;
+  if(ev>=beta)return ev;
+  if(ev>alpha)alpha=ev;
+  if(qd<=0)return alpha;
+  const list=[];
+  for(const m of pseudo(s)){
+    const vs=m.ep?m.t+(s.t==='w'?W:-W):m.t,q=s.b[vs];
+    if(!q)continue;
+    if(isKing(q))return MATE;
+    list.push([ordKey(s,m),m]);
+  }
+  list.sort((a,b)=>b[0]-a[0]);
+  for(const[,m]of list){
+    const sc=-qsearch(apply(s,m),-beta,-alpha,-(ev+delta(s,m)),qd-1);
+    if(aborted)return 0;
+    if(sc>=beta)return sc;
+    if(sc>alpha)alpha=sc;
+  }
+  return alpha;
+}
+function negamax(s,depth,alpha,beta,ev,ply){
+  tick();if(aborted)return 0;
+  if(depth<=0)return QD>0?qsearch(s,alpha,beta,ev,QD):ev;
+  const list=[];
+  for(const m of pseudo(s)){
+    const vs=m.ep?m.t+(s.t==='w'?W:-W):m.t;
+    if(isKing(s.b[vs]))return MATE-ply;
+    list.push([ordKey(s,m),m]);
+  }
+  if(!list.length)return 0;
+  list.sort((a,b)=>b[0]-a[0]);
+  let best=-Infinity;
+  for(const[,m]of list){
+    const sc=-negamax(apply(s,m),depth-1,-beta,-alpha,-(ev+delta(s,m)),ply+1);
+    if(aborted)return 0;
+    if(sc>best)best=sc;
+    if(sc>alpha)alpha=sc;
+    if(alpha>=beta)break;
+  }
+  return best;
+}
+const LEVELS={
+  easy:{depth:1,q:0,noise:260,randomRate:.2,ms:300,exact:true},
+  medium:{depth:2,q:2,noise:10,randomRate:0,ms:1500,exact:true},
+  hard:{depth:8,q:4,noise:3,randomRate:0,ms:2500,exact:false}
+};
+function chooseMove(s,level,msOverride){
+  const L=legal(s);
+  if(!L.length)return null;
+  if(L.length===1)return L[0];
+  const cfg=LEVELS[level]||LEVELS.medium;
+  if(Math.random()<cfg.randomRate)return L[Math.floor(Math.random()*L.length)];
+  let rows=L.map(m=>({m,d:delta(s,m)+(Math.random()-.5)*2*cfg.noise,sc:0}));
+  for(let i=rows.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[rows[i],rows[j]]=[rows[j],rows[i]];}
+  rows.sort((a,b)=>b.d-a.d);
+  if(cfg.depth<=1){return rows[0].m;}
+  const ev0=staticEval(s),ms=msOverride||cfg.ms*(W>=96?1.6:1);
+  nodes=0;aborted=false;QD=cfg.q;
+  let best=rows[0].m;
+  const start=Date.now();
+  for(let depth=1;depth<=cfg.depth;depth++){
+    deadline=depth===1?Infinity:start+ms;
+    let alpha=-Infinity;const done=[];
+    for(const r of rows){
+      const sc=-negamax(apply(s,r.m),depth-1,-Infinity,cfg.exact?Infinity:-alpha,-(ev0+delta(s,r.m)),1);
+      if(aborted)break;
+      r.sc=sc+(cfg.exact?(Math.random()-.5)*2*cfg.noise:0);
+      done.push(r);
+      if(r.sc>alpha)alpha=r.sc;
+    }
+    if(aborted)break;
+    done.sort((a,b)=>b.sc-a.sc);
+    best=done[0].m;rows=done;
+    if(done[0].sc>=MATE-200)break;
+  }
+  return best;
+}
+
+</script>
+<script>
 /* ---------- UI ---------- */
+const AI={level:null};let humanSide='w',thinking=false,aiId=0,worker=null,workerBad=false,pendingReq=null;
+const aiTurn=()=>!!AI.level&&cur.t!==humanSide;
+function cancelAI(){
+  aiId++;thinking=false;pendingReq=null;
+  if(worker){try{worker.terminate();}catch(e){}worker=null;}
+}
+function runAI(req,cb){
+  const run=()=>{setTimeout(()=>{if(req.id!==aiId)return;cb(chooseMove(req.s,req.level,req.ms));},40);};
+  if(!workerBad&&!worker){
+    try{
+      const src=$('logic').textContent+'\n'+$('engine').textContent+
+        '\nonmessage=e=>{const d=e.data;W=d.W;PO=d.PO;useSP=d.useSP;MODE=d.MODE;postMessage({id:d.id,m:chooseMove(d.s,d.level,d.ms)});};';
+      worker=new Worker(URL.createObjectURL(new Blob([src],{type:'text/javascript'})));
+      worker.onmessage=e=>{
+        const p=pendingReq;if(!p||e.data.id!==p.req.id)return;
+        pendingReq=null;p.cb(e.data.m);
+      };
+      worker.onerror=()=>{
+        workerBad=true;try{worker.terminate();}catch(e){}worker=null;
+        const p=pendingReq;pendingReq=null;if(p&&p.req.id===aiId)setTimeout(()=>p.cb(chooseMove(p.req.s,p.req.level,p.req.ms)),0);
+      };
+    }catch(e){workerBad=true;worker=null;}
+  }
+  if(worker){
+    pendingReq={req,cb};
+    worker.postMessage({id:req.id,W,PO,useSP,MODE,s:req.s,level:req.level,ms:req.ms});
+  }else run();
+}
+function maybeAI(){
+  if(!aiTurn()||thinking||!moves.length||insufficient(cur.b))return;
+  thinking=true;const id=++aiId,t0=performance.now();
+  $('status').className='';$('status').textContent='Computer is thinking…';
+  const ms=AI.level==='hard'?(W>=96?4000:W>=24?3000:2500):AI.level==='medium'?1500:300;
+  runAI({id,s:cur,level:AI.level,ms},mv=>{
+    if(id!==aiId)return;
+    const wait=Math.max(0,(AI.level==='easy'?500:350)-(performance.now()-t0));
+    setTimeout(()=>{
+      if(id!==aiId)return;
+      thinking=false;
+      const pick=mv&&moves.find(x=>x.f===mv.f&&x.t===mv.t&&(x.promo||'')===(mv.promo||'')&&!!x.shoot===!!mv.shoot)||moves[Math.floor(Math.random()*moves.length)];
+      play(pick);
+    },wait);
+  });
+}
 let cur=startState(),hist=[],sel=null,flip=false,moves=[];
 function describe(){
   const special=isSpecialMode(MODE),remix=isRemixMode(MODE);
@@ -448,7 +627,8 @@ function describe(){
   const title={classic:'Classic',remixed:'Remixed',special:'Special',sremix:'Special Remixed'}[MODE];
   return `${title}, ${W===96?'Mega ':''}${W}×${W}. Each side: ${parts.join(', ')}.`
     +(remix?' Pieces are shuffled separately for each side (pawns stay put).':'')
-    +((MODE==='classic'&&W===8)?'':' No castling.');
+    +((MODE==='classic'&&W===8)?'':' No castling.')
+    +(AI.level?` You play ${humanSide==='w'?'White':'Black'} against the ${AI.level} computer.`:' Two players.');
 }
 const $=id=>document.getElementById(id);
 /* ---- map-style view: wheel zooms at the cursor, right-drag pans (touch: pinch / drag) ---- */
@@ -559,8 +739,10 @@ function showOver(on,chk){
   $('ocrown').className='crown '+(mate?winner[0].toLowerCase():'d');
   $('ocrown').textContent=mate?'♚\uFE0E':'½';
   $('ot').textContent=mate?'Checkmate':!moves.length?'Stalemate':'Draw';
-  $('osub').textContent=mate?`${winner} wins${last?' with '+last:''}. ${loser}'s king has no escape.`
-    :!moves.length?`${loser} has no legal moves but is not in check, so the game is drawn.`
+  const nm=c=>AI.level?(c[0].toLowerCase()===humanSide?'You':'The computer'):c;
+  const wn=nm(winner),ln=nm(loser),poss=ln==='You'?'Your':ln==='The computer'?"The computer's":ln+"'s";
+  $('osub').textContent=mate?`${wn} ${wn==='You'?'win':'wins'}${last?' with '+last:''}. ${poss} king has no escape.`
+    :!moves.length?`${ln==='You'?'You have':ln==='The computer'?'The computer has':ln+' has'} no legal moves but ${ln==='You'?'are':'is'} not in check, so the game is drawn.`
     :'Neither side has enough material left to checkmate.';
   o.classList.add('show');$('oagain').focus();
 }
@@ -577,6 +759,7 @@ function render(){
   st.className='';
   if(!moves.length){st.className='alert';st.textContent=chk?`Checkmate. ${cur.t==='w'?'Black':'White'} wins.`:'Stalemate. The game is a draw.';}
   else if(insufficient(cur.b)){st.className='alert';st.textContent='Draw: not enough material to checkmate.';}
+  else if(AI.level){const me=cur.t===humanSide;st.textContent=thinking?'Computer is thinking…':me?(chk?'Your move. You are in check.':'Your move.'):(chk?'Computer is in check.':'Computer to move.');if(chk)st.className='alert';}
   else{st.textContent=chk?`${who} is in check.`:`${who} to move.`;if(chk)st.className='alert';}
   const ol=$('moves');ol.innerHTML='';
   hist.forEach((h,idx)=>{
@@ -590,7 +773,7 @@ function render(){
 const gameOver=()=>!moves.length||insufficient(cur.b);
 
 function click(i){
-  if(performance.now()-lastGesture<350||gameOver())return;
+  if(performance.now()-lastGesture<350||gameOver()||thinking||aiTurn())return;
   const p=cur.b[i],mine=p&&isW(p)===(cur.t==='w');
   if(sel!==null){
     const ms=moves.filter(m=>m.f===sel&&m.t===i);
@@ -600,7 +783,7 @@ function click(i){
   render();
 }
 
-function play(m){hist.push({s:cur,m,san:san(cur,m,moves)});cur=apply(cur,m);sel=null;render();}
+function play(m){hist.push({s:cur,m,san:san(cur,m,moves)});cur=apply(cur,m);sel=null;render();maybeAI();}
 
 function choosePromo(ms){
   const box=$('promo').firstElementChild;box.innerHTML='';
@@ -617,17 +800,22 @@ function choosePromo(ms){
   box.firstElementChild.focus();
 }
 
-$('undo').onclick=()=>{if(hist.length){cur=hist.pop().s;sel=null;render();}};
+$('undo').onclick=()=>{
+  cancelAI();
+  if(!hist.length)return;
+  do{cur=hist.pop().s;}while(AI.level&&hist.length&&cur.t!==humanSide);
+  sel=null;render();maybeAI();
+};
 $('flip').onclick=()=>{flip=!flip;render();};
 function startGame(m,n){
-  overDone=false;MODE=m;W=n;cur=startState();hist=[];sel=null;flip=false;
+  cancelAI();overDone=false;MODE=m;W=n;cur=startState();hist=[];sel=null;flip=!!AI.level&&humanSide==='b';
   setN();fitView();
   hintGone=false;$('hint').classList.remove('gone');
   $('hint').textContent=matchMedia('(pointer:coarse)').matches?'Pinch to zoom · drag to move around':'Scroll to zoom · hold right-click and drag to move around';
   $('info').textContent=describe();
   $('guide').hidden=!isSpecialMode(m);
   $('menu').classList.remove('show');
-  render();
+  render();maybeAI();
 }
 $('new').onclick=()=>startGame(MODE,W);
 $('oagain').onclick=()=>startGame(MODE,W);
@@ -642,7 +830,14 @@ function choose(groupId,attr,val){
 }
 document.querySelectorAll('#modes .opt').forEach(b=>b.onclick=()=>{pickMode=b.dataset.mode;choose('modes','mode',pickMode);});
 document.querySelectorAll('#sizes .opt').forEach(b=>b.onclick=()=>{pickN=+b.dataset.n;choose('sizes','n',pickN);});
-$('play').onclick=()=>startGame(pickMode,pickN);
+let pickOpp='pvp',pickSide='w';
+document.querySelectorAll('#opps .opt').forEach(b=>b.onclick=()=>{pickOpp=b.dataset.opp;choose('opps','opp',pickOpp);$('sidewrap').hidden=pickOpp==='pvp';});
+document.querySelectorAll('#sides .opt').forEach(b=>b.onclick=()=>{pickSide=b.dataset.side;choose('sides','side',pickSide);});
+$('play').onclick=()=>{
+  AI.level=pickOpp==='pvp'?null:pickOpp;
+  humanSide=pickSide==='r'?(Math.random()<.5?'w':'b'):pickSide;
+  startGame(pickMode,pickN);
+};
 $('fit').onclick=fitView;
 $('promo').onclick=e=>{if(e.target.id==='promo'){e.currentTarget.classList.remove('show');sel=null;render();}};
 
