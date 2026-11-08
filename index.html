@@ -86,7 +86,7 @@ details p{margin:8px 0;line-height:1.4}
     <small id="info"></small>
     <details id="guide" hidden>
       <summary>Piece guide</summary>
-      <p><b>❋ Pinwheel</b> slides like a rook, then may turn 90° clockwise (as seen from White's side) once and slide again.</p>
+      <p><b>❋ Pinwheel</b> is a giant knight: it jumps 5–7 squares in a straight line, turns 90° to either side, and goes 5–7 squares more. It leaps over everything and captures only on the square it lands on.</p>
       <p><b>❖ Ricochet</b> slides like a bishop and may bounce once off the board edge.</p>
       <p><b>∿ Serpent</b> zigzags forward or backward, one diagonal step at a time, left then right.</p>
       <p><b>◎ Wormhole</b> steps like a king, or teleports to its mirror square across the left–right centre if empty.</p>
@@ -213,17 +213,14 @@ function special(b,i){
   const add=(rr,cc)=>{const t=rr*W+cc;if(!seen.has(t)){seen.add(t);out.push({f:i,t});}};
   const step=(rr,cc)=>{const q=b[rr*W+cc];if(!q){add(rr,cc);return true;}if(enemy(q))add(rr,cc);return false;};
   if(k==='w'){
-    const CW=[[-1,0],[0,1],[1,0],[0,-1]];
-    for(let d=0;d<4;d++){
-      const[dr,dc]=CW[d],[er,ec]=CW[(d+1)%4];
-      let rr=r+dr,cc=c+dc;
-      while(inb(rr,cc)){
-        if(!step(rr,cc))break;
-        let r2=rr+er,c2=cc+ec;
-        while(inb(r2,c2)){if(!step(r2,c2))break;r2+=er;c2+=ec;}
-        rr+=dr;cc+=dc;
+    /* giant knight: 5-7 squares one way, turn 90 degrees (either side), 5-7 more. It jumps, so nothing blocks it. */
+    for(const[dr,dc]of O)for(const[er,ec]of(dr?[[0,1],[0,-1]]:[[1,0],[-1,0]]))
+      for(let a=5;a<=7;a++)for(let n=5;n<=7;n++){
+        const rr=r+dr*a+er*n,cc=c+dc*a+ec*n;
+        if(!inb(rr,cc))continue;
+        const q=b[rr*W+cc];
+        if(!q||enemy(q))add(rr,cc);
       }
-    }
   }else if(k==='x'){
     for(const[a,e]of D){
       let dr=a,dc=e,rr=r,cc=c,bounced=false;
