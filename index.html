@@ -129,8 +129,8 @@ details p{margin:8px 0;line-height:1.4}
       <p><b>❋ Pinwheel</b> is a giant knight: it jumps 5–7 squares in a straight line, turns 90° to either side, and goes 5–7 squares more. It leaps over everything and captures only on the square it lands on.</p>
       <p><b>❖ Ricochet</b> slides like a bishop and may bounce once off the board edge.</p>
       <p><b>∿ Serpent</b> zigzags forward or backward, one diagonal step at a time, left then right.</p>
-      <p><b>◎ Wormhole</b> steps like a king, or teleports to its mirror square across the left–right centre if empty.</p>
-      <p><b>✥ Grasshopper</b> moves like a rook but skips squares: it lands only 2, 4, 6… squares away along a rank or file, hopping over empty squares only. The first piece in its way stops it, and it captures that piece only if it is an enemy on a landing square.</p>
+      <p><b>◎ Wormhole</b> steps like a king, or teleports to its mirror square across the left–right centre. The mirror square can be empty or hold an enemy piece, which it captures.</p>
+      <p><b>✥ Grasshopper</b> moves like a rook but lands only 2, 4, 6… squares away. It hops over any number of your own pieces. The first enemy piece in its way is captured if it sits on a landing square; if it sits on a skipped square, the Grasshopper can jump over it onto the empty square right behind it.</p>
       <p><b>⊕ Archer</b> moves to any empty square within 2 tiles (a 5×5 area), jumping over pieces. Instead of moving, it can shoot an enemy queen, king, knight or pawn in that area without leaving its square. It never captures by moving onto a piece.</p>
     </details>
     <div class="btns">
@@ -271,7 +271,7 @@ function attacked(b,sq,by,list){
       const p=b[i];if(!p||isW(p)!==w)continue;
       const k=p.toLowerCase(),dr=Math.abs(row(i)-r),dc=Math.abs(col(i)-c);
       if(k==='a'){if(dr>2||dc>2)continue;}
-      else if(k==='o'){if(dr>1||dc>1)continue;}
+      else if(k==='o'){if((dr>1||dc>1)&&!(dr===0&&col(i)+c===W-1))continue;}
       else if(k==='g'){if(dr&&dc)continue;}
       else if(k==='w'){if(dr<5||dr>7||dc<5||dc>7)continue;}
       else if(k==='s'){if(dc>1)continue;}
@@ -298,14 +298,19 @@ function special(b,i){
         if(!q||enemy(q))add(rr,cc);
       }
   }else if(k==='g'){
-    /* rook lines, but it only lands on every other square (2, 4, 6... away). It skips empty squares, never pieces:
-       the first piece in its way stops it, and it captures that piece only if it is an enemy on a landing square. */
+    /* rook lines, landing only on squares an even distance away (2, 4, 6...).
+       Your own pieces never block it (it hops over any number of them) but it cannot land on them.
+       The first enemy piece in the line: on a landing square -> capture it; on a skipped square -> hop over it,
+       but only onto the empty square directly behind it. Then that line ends. */
     for(const[dr,dc]of O)for(let n=1;;n++){
       const rr=r+dr*n,cc=c+dc*n;
       if(!inb(rr,cc))break;
       const q=b[rr*W+cc];
-      if(q){if(n%2===0&&enemy(q))add(rr,cc);break;}
+      if(!q){if(n%2===0)add(rr,cc);continue;}
+      if(!enemy(q))continue;
       if(n%2===0)add(rr,cc);
+      else{const r2=rr+dr,c2=cc+dc;if(inb(r2,c2)&&!b[r2*W+c2])add(r2,c2);}
+      break;
     }
   }else if(k==='x'){
     for(const[a,e]of D){
@@ -331,7 +336,7 @@ function special(b,i){
     }
   }else if(k==='o'){
     for(const[d,e]of K){const rr=r+d,cc=c+e;if(inb(rr,cc)){const q=b[rr*W+cc];if(!q||enemy(q))add(rr,cc);}}
-    if(!b[r*W+(W-1-c)])add(r,W-1-c);
+    {const q=b[r*W+(W-1-c)];if(!q||enemy(q))add(r,W-1-c);}
   }else if(k==='a'){
     for(let dr=-2;dr<=2;dr++)for(let dc=-2;dc<=2;dc++){
       const rr=r+dr,cc=c+dc;
