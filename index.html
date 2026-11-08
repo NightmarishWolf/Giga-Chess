@@ -128,7 +128,7 @@ details p{margin:8px 0;line-height:1.4}
       <p><b>❖ Ricochet</b> slides like a bishop and may bounce once off the board edge.</p>
       <p><b>∿ Serpent</b> zigzags forward or backward, one diagonal step at a time, left then right.</p>
       <p><b>◎ Wormhole</b> steps like a king, or teleports to its mirror square across the left–right centre if empty.</p>
-      <p><b>✥ Grasshopper</b> moves like a rook but skips squares: it lands only 2, 4, 6… squares away along a rank or file, and leaps over any pieces between.</p>
+      <p><b>✥ Grasshopper</b> moves like a rook but skips squares: it lands only 2, 4, 6… squares away along a rank or file, hopping over empty squares only. The first piece in its way stops it, and it captures that piece only if it is an enemy on a landing square.</p>
       <p><b>⊕ Archer</b> moves to any empty square within 2 tiles (a 5×5 area), jumping over pieces. Instead of moving, it can shoot an enemy queen, king, knight or pawn in that area without leaving its square. It never captures by moving onto a piece.</p>
     </details>
     <div class="btns">
@@ -261,12 +261,14 @@ function special(b,i){
         if(!q||enemy(q))add(rr,cc);
       }
   }else if(k==='g'){
-    /* rook lines, but it only lands on every other square (2, 4, 6... away) and leaps over whatever is between */
-    for(const[dr,dc]of O)for(let n=2;;n+=2){
+    /* rook lines, but it only lands on every other square (2, 4, 6... away). It skips empty squares, never pieces:
+       the first piece in its way stops it, and it captures that piece only if it is an enemy on a landing square. */
+    for(const[dr,dc]of O)for(let n=1;;n++){
       const rr=r+dr*n,cc=c+dc*n;
       if(!inb(rr,cc))break;
       const q=b[rr*W+cc];
-      if(!q||enemy(q))add(rr,cc);
+      if(q){if(n%2===0&&enemy(q))add(rr,cc);break;}
+      if(n%2===0)add(rr,cc);
     }
   }else if(k==='x'){
     for(const[a,e]of D){
